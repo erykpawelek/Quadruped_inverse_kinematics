@@ -11,13 +11,13 @@ from quadruped_inverse import rotation_matrix
 class RobotEnvironment:
 
     def __init__(self):
-        self.fig = plt.figure(figsize=(12, 11))                 # Creating figure vindow wich is next connected to each plotting operation
+        self.fig = plt.figure(figsize=(12, 11))                 # Creating figure window for plotting operations
         self.ax = self.fig.add_subplot(111, projection = '3d')  # Creating 3D coordinate
         self.ax.set_proj_type('ortho')                          # Orthagonal projection
         plt.subplots_adjust(bottom=0.3)                         # Offset for sliders 
         self.setup_axes()                                       
         
-    # Method responsible for setup of the plotting enviornment
+    # Method responsible for setting up the plotting environment
     def setup_axes(self):
 
         # Axes limits
@@ -47,7 +47,7 @@ class RobotEnvironment:
         self.ax.set_title("Quadruped robot", fontsize = 10)
 
         # Base view
-        self.ax.view_init(elev=40, azim=60)
+        self.ax.view_init(elev=30, azim=15)
 
         
         
@@ -58,9 +58,8 @@ class RobotEnvironment:
     def get_axes(self):
         return self.ax
 
-# Class witch represent's robots body 
+# Class which represents the robot's body 
 class RobotBody:
-
 
     def __init__(self):
         
@@ -69,7 +68,7 @@ class RobotBody:
         self.width = Leg.body_width
         self.high = Leg.body_high
 
-    # Methode resposible for creating robot corrrners
+    # Method responsible for creating robot corners
     def get_robot_corners(self, rotation = [0, 0, 0]):
         
         corners = np.array([
@@ -90,7 +89,7 @@ class RobotBody:
         
         return np.array(corners_after_rotation)
     
-    # Special diagnostic method
+    # Method for diagnostic checking of body geometry and rotation accuracy
     def diagnostic(self, corners_after_rotation, rotation = [0, 0, 0]):
 
     
@@ -145,7 +144,7 @@ class RobotVisualization:
         # Passing robots body
         corners = body.get_robot_corners(rotation)
 
-        # Combination of points wich creates edges
+        # Combinations of points that form the edges of the robot body
         edges = [  
             [0, 2, 6, 4, 0],
             [1, 3, 7, 5, 1],
@@ -190,36 +189,42 @@ class RobotVisualization:
 
 if __name__ == "__main__":
    
+    # Creating instances for visualization
     robot_environment = RobotEnvironment() 
     robot_body = RobotBody()
     visualization = RobotVisualization(robot_environment)
-    #visualization.draw_body(robot_body, rotation)
-    
+    legs = [Leg(i) for i in range(4)]
 
+    # Defining end effectors positions of each leg with respect to local leg origin coordinate
+    end_effectors_rel_to_leg_origin = [[0, 0.045, -0.21], [0, 0.045, -0.21],
+                                        [0, -0.045, -0.21], [0, -0.045, -0.21]]
+
+    # Defining length placing and dimmensions of sliders
     ax_roll = plt.axes([0.25, 0.2, 0.65, 0.03])
     ax_pitch = plt.axes([0.25, 0.15, 0.65, 0.03])
     ax_yaw = plt.axes([0.25, 0.1, 0.65, 0.03])
     
+    # Creating sliders
     roll_slider = Slider(ax_roll, 'Roll (X)', -30, 30, valinit=0)
     pitch_slider = Slider(ax_pitch, 'Pitch (Y)', -30, 30, valinit=0)
     yaw_slider = Slider(ax_yaw, 'Yaw (Z)', -30, 30, valinit=0)
 
-    legs = [Leg(i) for i in range(4)]
-
-    end_effectors_rel_to_leg_origin = [[0, 0.045, -0.21], [0, 0.045, -0.21],
-                                        [0, -0.045, -0.21], [0, -0.045, -0.21]]
 
     def update(param):
 
+        # Reading values from sliders
         roll = math.radians(roll_slider.val)
         pitch = math.radians(pitch_slider.val)
         yaw = math.radians(yaw_slider.val)
 
         rotation = [roll, pitch, yaw]
 
+        # Clearing visualization
         visualization.axes.clear()
+        # Re-creating enviorment
         visualization.environment.setup_axes()
-            
+
+        # Drawing robots visualization
         visualization.draw_body(robot_body, rotation)
 
         for i in range(4):
@@ -227,6 +232,7 @@ if __name__ == "__main__":
 
         visualization.environment.fig.canvas.draw_idle()  
 
+    # Slider value value update with every differetince
     roll_slider.on_changed(update)
     pitch_slider.on_changed(update)
     yaw_slider.on_changed(update)

@@ -1,7 +1,9 @@
 import math
 import numpy as np
 
-#Function witch converts coordinate to angle in radians. It ensures that angle is not fom Pi to - Pi but from 0 to 2Pi it is used to return correct values of angle considering the signs of arguments.
+# Function which converts coordinates to angle in radians. 
+# It ensures that the angle is not from Pi to -Pi but from 0 to 2Pi. 
+# It is used to return correct angle values considering the signs of the arguments.
 def coord_to_rad(x,y): 
 
     angle = math.atan2(y,x)
@@ -9,8 +11,8 @@ def coord_to_rad(x,y):
         angle += 2*math.pi
     return angle
 
-#Function returns the rotation matrix when with posibility to change order of rotation
-def rotation_matrix(rotation = [0, 0, 0], order = 'xyz'): 
+# Function that returns the rotation matrix with the possibility to change the order of rotations
+def rotation_matrix(rotation = [0, 0, 0], order = 'zyx'): 
 
     roll, pitch, yaw = rotation[0], rotation[1], rotation[2]
 
@@ -26,10 +28,10 @@ def rotation_matrix(rotation = [0, 0, 0], order = 'xyz'):
     elif order == 'zyx' : return rot_Z @ rot_Y @ rot_X 
     else: raise ValueError(f"Incorrect order:'{order}'")  
 
-#Class witch represents each leg
+# Class which represents each leg
 class Leg:
 
-    #Defining phisical parameters of the system (for each leg all are same)
+    # Defining physical parameters of the system (the same for each leg)
     body_length = 0.25 
     body_width = 0.10
     body_high = 0.05
@@ -42,7 +44,7 @@ class Leg:
 
         self.id = id #Defining id of each leg
 
-        #Assigning ech leg to the correct place of robot's body by id number
+        # Assigning each leg to the correct place on the robot's body by ID number
         match self.id:
             #Left front leg
             case 0: 
@@ -64,9 +66,8 @@ class Leg:
             case _:
                 raise ValueError("Leg id has to be from 0-3")
 
-    #Method wich rotates the coordinate of robots body in order to find out in wich position will be leg's end_effector after the rotation
-    #From Global coorginate --> local rotated one
-
+    # Method that rotates the robot's body coordinates to determine the end-effector's position after rotation
+    # From global coordinates --> local rotated ones
     def bodyrotation_to_offset(self, xyz_endeffector_rel_2_leg_origin, rotation = [0,0,0]): 
 
         xyz_endeffector_rel_2_leg_origin = np.array(xyz_endeffector_rel_2_leg_origin)
@@ -80,55 +81,54 @@ class Leg:
         xyz_endeffector_rel_2_leg_origin =xyz_endeffector_rel_2_body_after_rotation - self.leg_origin
         return  xyz_endeffector_rel_2_leg_origin
     
-    #Method resposible for calculating inverse kinematics of robot's leg.
-    #  ARGUMENTS  --> [X, Y, Z](Relative to leg origin), Return --> angle combination of leg wich allows to reach the [X, Y, Z] position
+    # Method responsible for calculating inverse kinematics of the robot's leg.
+    # ARGUMENTS --> [X, Y, Z] (relative to leg origin), Returns --> angle combination that allows reaching the [X, Y, Z] position
     def inverse_kinematics(self, xyz):
         
         x, y, z = xyz[0], xyz[1], xyz[2]
-        #Calculating legth a, a --> forom leg origin to end effector
+        # Calculating length a, a --> from leg origin to end effector
         len_a = math.sqrt((y**2 + z**2))
 
-        #Auxilary angles to calculate theta1
+        # Auxiliary angles to calculate theta1
         angle1 = coord_to_rad(y,z)
         angle2 = math.asin(Leg.l1 * (math.sin(Leg.phi) / len_a))
         angle3 = math.pi - Leg.phi - angle2
 
-        #Distinction beetwen right and left side in order to find out theta1 with respect to samely oriented coordinate
+        # Differentiation between right and left side to find theta1 with respect to the same coordinate orientation
         if self.name in ["Left front", "Left back"]:
             theta1 = angle1 + angle3
         else:
             theta1 = angle1 - angle3
 
-        #Prividing theta1 between 0 - 2Pi
+        # Providing theta1 between 0 - 2Pi
         if theta1 >=  2 * math.pi: theta1 = theta1 - 2 * math.pi
 
-        #Distinction beetwen legs --> 
-        # when robot's body rotate f.ex. along X with positive angle left legs hawe to ratate in contrary angle to right legs (arm rotation theta1)
+        # Differentiation between legs --> when robot's body rotates (e.g. along X axis), left legs have to rotate in the opposite direction to the right legs
         if self.name in ["Left front", "Left back"]:
             R = theta1 + self.phi - math.pi/2 #Left leg
         else:
             R = theta1 - self.phi - math.pi/2 #Right leg
 
-        #Rotaion matrix wich allows us to to project our wiev parpendicular to XZ plane of the leg
-        # From non roatadet leg origin --> rotated leg origin
-        projection_rot =np.linalg.inv(rotation_matrix([R,0,0]))
+        # Rotation matrix that allows us to project our view perpendicular to the XZ plane of the leg
+        # From non-rotated leg origin --> rotated leg origin
+        projection_rot = rotation_matrix([R,0,0]).T
 
-        joint2 = np.array([0, Leg.l1 * math.cos(theta1), Leg.l1 * math.sin(theta1)]) #Vector from J1 to J2, relative to leg origin coordinate
+        joint2 = np.array([0, Leg.l1 * math.cos(theta1), Leg.l1 * math.sin(theta1)]) # Vector from joint 1 to joint 2, relative to leg origin coordinates
         end_effector = np.array([x, y, z])
-        end_effector_to_j2 = end_effector - joint2                                   #Vector from J2 to end effector
-        end_effector_to_j2 = projection_rot @ end_effector_to_j2   #Above vector but taking into account rotated body coordiante
+        end_effector_to_j2 = end_effector - joint2                                   # Vector from joint 2 to end effector
+        end_effector_to_j2 = projection_rot @ end_effector_to_j2   # Above vector but taking into account rotated body coordinates
 
         x_,y_,z_ = end_effector_to_j2[0], end_effector_to_j2[1], end_effector_to_j2[2]
 
         #Length b --> from J2 to end effector
         len_b = math.sqrt((x_**2 + z_**2))
 
-        #Sefe condition to ensure that we dont reach out of our range ,which might get us inpredicted solutions
+        # Safe condition to ensure that we don't exceed the range, which might lead to unexpected solutions
         if len_b > (Leg.l2 + Leg.l3):
             len_b = (Leg.l2 + Leg.l3) * 0.99
             raise ValueError("Position out of range")
         
-        #Auxilary angles to calculate theta2 and theta3
+        # Auxiliary angles to calculate theta2 and theta3
         beta1 = coord_to_rad(x_,z_)
         beta2 = math.acos((Leg.l2**2 + len_b**2 - Leg.l3**2) / (2 * Leg.l2 * len_b))
         beta3 = math.acos((Leg.l2**2 + Leg.l3**2 - len_b**2) / (2 * Leg.l2 * Leg.l3))
@@ -136,28 +136,28 @@ class Leg:
         theta2 = beta1 - beta2
         theta3 = math.pi - beta3
 
-        #Array containing resulting angles
+        # Array containing resulting angles
         angles = [theta1, theta2, theta3]
 
-        #Placeholder array for all joints positions 
+        # Placeholder array for all joint positions
         joint1 = np.array([0,0,0])
 
         if self.name in ["Left front", "Left back"]:
-           #Calculating joint 3 position with respect to non rotated robots body 
-            #From local rotated robots body coorinate --> non rotated global coordinate
+            # Calculating joint 3 position with respect to non-rotated robot body
+            # From local rotated robot body coordinate --> non-rotated global coordinate
             joint3_not_rotated = np.array([Leg.l2 * math.cos(theta2), Leg.l1, Leg.l2 * math.sin(theta2)])
-            joint3 = np.linalg.inv(projection_rot) @ joint3_not_rotated
+            joint3 = projection_rot.T @ joint3_not_rotated
 
-            #Calculating end_effector position with respect to roatated robots leg origin coordinate
+            # Calculating end effector position with respect to rotated robot leg origin coordinate
             end_effector = joint3_not_rotated + np.array([Leg.l3 * math.cos(theta2 + theta3), 0, Leg.l3 * math.sin(theta2 + theta3)])
-            end_effector = np.linalg.inv(projection_rot) @ end_effector
+            end_effector = projection_rot.T @ end_effector
         else:
-           #Calculating joint 3 position with respect to non rotated robots body 
-            #From local rotated robots body coorinate --> non rotated global coordinate
+            # Calculating joint 3 position with respect to non-rotated robot body
+            # From local rotated robot body coordinate --> non-rotated global coordinate
             joint3_not_rotated = np.array([Leg.l2 * math.cos(theta2), -Leg.l1, Leg.l2 * math.sin(theta2)])
             joint3 = np.linalg.inv(projection_rot) @ joint3_not_rotated
 
-            #Calculating end_effector position with respect to roatated robots leg origin coordinate
+            # Calculating end effector position with respect to rotated robot leg origin coordinate
             end_effector = joint3_not_rotated + np.array([Leg.l3 * math.cos(theta2 + theta3), 0, Leg.l3 * math.sin(theta2 + theta3)])
             end_effector = np.linalg.inv(projection_rot) @ end_effector
         
@@ -166,6 +166,7 @@ class Leg:
         Joints = [joint1, joint2, joint3, end_effector]
         return [angles, Joints]
     
+    # Returns leg origin taking into account body rotation
     def get_leg_origin(self, rotation = [0, 0, 0]):
 
         return rotation_matrix(rotation) @ self.leg_origin
@@ -173,8 +174,9 @@ class Leg:
 
 
 
-#Diafnostic module
 
+
+# Testing module --> If you want to change resulting angles to fit your robot configuration, you can test your results here
 
 if __name__  == "__main__":
 
@@ -182,24 +184,18 @@ if __name__  == "__main__":
     Test_leg2 = Leg(1)  #Left back
     Test_leg3 = Leg(2)  #Right front
     Test_leg4 = Leg(3)  #Right back
+
     test_points = [
         [0.0, 0.045, -0.21],
         [0.0, -0.045, -0.21],
         [0.0, 0.2, -0.05]]
-    # test_ = Test_leg1.inverse_kinematics(Test_leg1.bodyrotation_to_offset(test_points[0], [math.radians(0), 0, 0]))
-    # macierz_obrotu = rotation_matrix([math.radians(0), 0, 0])
-    # leg_origin = Test_leg1.get_leg_origin([math.radians(0), 0, 0])
-    # angles = test_[0]
-    # joints = test_[1]
-    # print("Lewa przednia:","Fi1: ",math.degrees(angles[0]),"Fi2: ",math.degrees(angles[1]), "Fi3: ", math.degrees(angles[2]),"\n")
-    # print("Joint 1:", joints[0], "Joint 2:", joints[1], "Joint 3:", joints[2],'\n',"Koncowka:",joints[3],'\n')
-    # print("Wspolrzedne leg origin: ", "X: ", leg_origin[0], "Y: ", leg_origin[1], "Z: ", leg_origin[2])
-    # print("macierz obrotu: ", macierz_obrotu)
+    
+    angles, joints = Test_leg1.inverse_kinematics(Test_leg1.bodyrotation_to_offset(test_points[0], [math.radians(0), 0, 0]))
+    
+    print("\nLeft front:","Fi1: ",math.degrees(angles[0]),"Fi2: ",math.degrees(angles[1]), "Fi3: ", math.degrees(angles[2]),"\n")
 
-    # test_angles = Test_leg2.inverse_kinematics(Test_leg2.bodyrotation_to_offset(test_points[0]))
-    # print("Lewa tył:","Fi1: ",math.degrees(test_angles[0]),"Fi2: ",math.degrees(test_angles[1]), "Fi3: ", math.degrees(test_angles[2]))
-    # test_angles = Test_leg3.inverse_kinematics(Test_leg3.bodyrotation_to_offset(test_points[1]))
-    # print("Prawa przednia:","Fi1: ",math.degrees(test_angles[0]),"Fi2: ",math.degrees(test_angles[1]), "Fi3: ", math.degrees(test_angles[2]))
-    angles, joints = Test_leg3.inverse_kinematics(Test_leg4.bodyrotation_to_offset(test_points[1],[math.radians(0), 0, 0] ))
-    print("Prawa przednia:","Fi1: ",math.degrees(angles[0]),"Fi2: ",math.degrees(angles[1]), "Fi3: ", math.degrees(angles[2]))
-    print("Joint 1:", joints[0], "Joint 2:", joints[1], "Joint 3:", joints[2],'\n',"Koncowka:",joints[3],'\n')    
+    print("Joint 1:", joints[0], "Joint 2:", joints[1], "Joint 3:", joints[2],'\n',"Konc:",joints[3],'\n')
+
+    
+    
+    
