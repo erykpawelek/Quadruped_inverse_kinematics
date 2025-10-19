@@ -6,8 +6,10 @@ The program calculates compensation for each leg to enable the robot to rotate b
 
 ## GUI and visualization view
 
+View of default and rotated position.
+
 ![Default position](./Images/Gui_image.png)
-![Rotated position](./Images/Gui_image.png)
+![Rotated position](./Images/Gui_image2.png)
 
 ## Equations and Diagrams
 
