@@ -49,9 +49,6 @@ class RobotEnvironment:
         # Base view
         self.ax.view_init(elev=30, azim=15)
 
-        
-        
-
         self.ax.scatter([0], [0], [0], color='red', s=50, label='Center')
 
     # Method responsible for returning setupped environment
@@ -213,10 +210,11 @@ if __name__ == "__main__":
     def update(param):
 
         # Reading values from sliders
-        roll = math.radians(roll_slider.val)
-        pitch = math.radians(pitch_slider.val)
-        yaw = math.radians(yaw_slider.val)
+        roll = math.radians(round(roll_slider.val))
+        pitch = math.radians(round(pitch_slider.val))
+        yaw = math.radians(round(yaw_slider.val))
 
+        
         rotation = [roll, pitch, yaw]
 
         # Clearing visualization

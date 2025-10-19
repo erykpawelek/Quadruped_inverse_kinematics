@@ -4,6 +4,11 @@ Python implementation of inverse kinematics for a quadruped robot.
 
 The program calculates compensation for each leg to enable the robot to rotate by a defined angle around a chosen axis.
 
+## GUI and visualization view
+
+![Default position](./Images/Gui_image.png)
+![Rotated position](./Images/Gui_image.png)
+
 ## Equations and Diagrams
 
 ![Front view of the robot (left front leg)](./Images/Side%20movement%20calculation.png)
